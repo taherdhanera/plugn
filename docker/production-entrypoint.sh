@@ -9,7 +9,7 @@ fi
 ./yii migrate --interactive=0
 
 nginx -t
-service cron start
-service nginx start
+cron
+nginx
 
 exec php-fpm -F
