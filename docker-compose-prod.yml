@@ -5,9 +5,9 @@ networks:
     driver: bridge
 
 services:
-   
+
   app:
-    build: 
+    build:
       context: .
       dockerfile: ./Dockerfile-nginx-prod
     container_name: plugn-backend-prod
@@ -24,12 +24,16 @@ services:
     #    tail -f /dev/null  # Keep container running
     ports:
       - "80:80" #app endpoint
-    volumes:
-      - .:/home/ubuntu/plugn
-      #- ./nginx/basic.conf:/etc/nginx/sites-available/basic.conf
     depends_on:
-      - redis
+      redis:
+        condition: service_healthy
       #- mysql
+    healthcheck:
+      test: ["CMD-SHELL", "php -r '$$s=@fsockopen(\"127.0.0.1\",80); if (!$$s) exit(1); fclose($$s);'"]
+      interval: 30s
+      timeout: 5s
+      retries: 6
+      start_period: 90s
     networks:
       - plugn-network
 
@@ -44,7 +48,11 @@ services:
    #   - redis-server --port 7777
     volumes:
     - redis-data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
 
 volumes:
   redis-data:
-  

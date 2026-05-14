@@ -9,11 +9,7 @@ RUN apt-get update && apt-get install -y \
      unzip \
      nginx \
      cron \
-     #wkhtmltopdf \
-     #chromium \
-     #imagemagick \
-     #curl \
-     #composer \
+     curl \
      libicu-dev \
      && docker-php-ext-configure gd --with-freetype --with-jpeg  \
      && docker-php-ext-configure intl \
@@ -66,18 +62,12 @@ RUN chmod -R 775 /home/ubuntu/plugn
 
 RUN cd /home/ubuntu/plugn
 
-#RUN composer install 
-#--no-dev
-
 #COPY ./wait-for-it.sh /usr/local/bin/wait-for-it
 #RUN chmod +x /usr/local/bin/wait-for-it
 
 COPY ./cron/cronlist /etc/cron.d/cronlist
 RUN chmod 0644 /etc/cron.d/cronlist
 RUN crontab /etc/cron.d/cronlist
-
-# Start cron service
-RUN service cron start
 
 #RUN ./init --env=Production-Nginx --overwrite=All 
   
@@ -94,6 +84,9 @@ RUN rm /etc/nginx/sites-enabled/default
 # Expose port 80
 EXPOSE 80
 
+COPY ./docker/production-entrypoint.sh /usr/local/bin/plugn-production-entrypoint
+RUN chmod +x /usr/local/bin/plugn-production-entrypoint
+
 # Start Nginx and PHP-FPM
 #CMD ["sh", "-c", "sleep 5 && ./yii migrate && service nginx restart && php-fpm && tail -f /dev/null"]
-CMD ["sh", "-c", "composer install && ./init --env=Production-Docker --overwrite=All && ./yii migrate --interactive=0 && service nginx restart && php-fpm && tail -f /dev/null"]
+CMD ["plugn-production-entrypoint"]
