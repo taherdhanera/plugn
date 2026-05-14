@@ -11,6 +11,7 @@ RUN apt-get update && apt-get install -y \
      cron \
      curl \
      procps \
+     supervisor \
      libicu-dev \
      && docker-php-ext-configure gd --with-freetype --with-jpeg  \
      && docker-php-ext-configure intl \
@@ -46,8 +47,6 @@ RUN apt-get update && apt-get install -y \
 #RUN ln -sf /etc/nginx/conf.d/development.conf /etc/nginx/sites-enabled/
 #RUN ln -sf /etc/nginx/conf.d/basic.conf /etc/nginx/sites-enabled/
 
-RUN ln -s /home/ubuntu/plugn ~/www
-
 # Set working directory in the container
 WORKDIR /home/ubuntu/plugn
 
@@ -60,10 +59,21 @@ RUN curl -sS https://getcomposer.org/installer | php -- --install-dir=/usr/local
 RUN composer install --no-dev --no-interaction --prefer-dist --optimize-autoloader
 
 # Set permissions for the web server
-#RUN chown -R www-data:www-data /home/ubuntu/plugn \
-RUN chmod -R 775 /home/ubuntu/plugn
-
-RUN cd /home/ubuntu/plugn
+RUN mkdir -p \
+     /home/ubuntu/plugn/agent/runtime \
+     /home/ubuntu/plugn/api/runtime \
+     /home/ubuntu/plugn/backend/runtime \
+     /home/ubuntu/plugn/backend/web/uploads \
+     /home/ubuntu/plugn/console/runtime \
+     /home/ubuntu/plugn/crm/runtime \
+     /home/ubuntu/plugn/frontend/runtime \
+     /home/ubuntu/plugn/frontend/web/uploads \
+     /home/ubuntu/plugn/partner/runtime \
+     /home/ubuntu/plugn/partner/web/uploads \
+     /home/ubuntu/plugn/remail/runtime \
+     /home/ubuntu/plugn/shortner/runtime \
+     && chown -R www-data:www-data /home/ubuntu/plugn \
+     && chmod -R 775 /home/ubuntu/plugn
 
 #COPY ./wait-for-it.sh /usr/local/bin/wait-for-it
 #RUN chmod +x /usr/local/bin/wait-for-it
@@ -89,5 +99,6 @@ EXPOSE 80
 
 COPY ./docker/production-entrypoint.sh /usr/local/bin/plugn-production-entrypoint
 RUN chmod +x /usr/local/bin/plugn-production-entrypoint
+COPY ./docker/supervisord-prod.conf /etc/supervisor/conf.d/plugn-production.conf
 
 CMD ["plugn-production-entrypoint"]
