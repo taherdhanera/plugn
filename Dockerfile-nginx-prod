@@ -10,6 +10,7 @@ RUN apt-get update && apt-get install -y \
      nginx \
      cron \
      curl \
+     procps \
      libicu-dev \
      && docker-php-ext-configure gd --with-freetype --with-jpeg  \
      && docker-php-ext-configure intl \
@@ -56,6 +57,8 @@ COPY . /home/ubuntu/plugn
 # Install Composer
 RUN curl -sS https://getcomposer.org/installer | php -- --install-dir=/usr/local/bin --filename=composer
 
+RUN composer install --no-dev --no-interaction --prefer-dist --optimize-autoloader
+
 # Set permissions for the web server
 #RUN chown -R www-data:www-data /home/ubuntu/plugn \
 RUN chmod -R 775 /home/ubuntu/plugn
@@ -87,6 +90,4 @@ EXPOSE 80
 COPY ./docker/production-entrypoint.sh /usr/local/bin/plugn-production-entrypoint
 RUN chmod +x /usr/local/bin/plugn-production-entrypoint
 
-# Start Nginx and PHP-FPM
-#CMD ["sh", "-c", "sleep 5 && ./yii migrate && service nginx restart && php-fpm && tail -f /dev/null"]
 CMD ["plugn-production-entrypoint"]
