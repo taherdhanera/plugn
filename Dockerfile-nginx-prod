@@ -101,4 +101,4 @@ COPY ./docker/production-entrypoint.sh /usr/local/bin/plugn-production-entrypoin
 RUN chmod +x /usr/local/bin/plugn-production-entrypoint
 COPY ./docker/supervisord-prod.conf /etc/supervisor/conf.d/plugn-production.conf
 
-CMD ["plugn-production-entrypoint"]
+CMD ["/usr/local/bin/plugn-production-entrypoint"]
