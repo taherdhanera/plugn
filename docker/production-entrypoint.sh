@@ -41,7 +41,7 @@ PHP
 wait_for_db() {
   target="$(resolve_db_target || true)"
   if [ -z "$target" ]; then
-    log "No database host found; running migrations without a TCP readiness check"
+    log "No database host found; running migrations without a database readiness check"
     return 0
   fi
 
@@ -52,17 +52,50 @@ wait_for_db() {
   elapsed=0
 
   while [ "$elapsed" -lt "$timeout" ]; do
-    if php -r '$host = $argv[1]; $port = (int) $argv[2]; $socket = @fsockopen($host, $port, $errno, $errstr, 2); if ($socket) { fclose($socket); exit(0); } exit(1);' "$host" "$port"; then
-      log "Database reachable at $host:$port"
+    if php -r '
+$host = $argv[1];
+$port = (int) $argv[2];
+$envUser = getenv("DB_USER") ?: getenv("DB_USERNAME") ?: getenv("MYSQL_USER");
+$envPassword = getenv("DB_PASSWORD");
+if ($envPassword === false) {
+    $envPassword = getenv("MYSQL_PASSWORD");
+}
+
+$user = $envUser ?: "root";
+$password = $envPassword === false ? "" : $envPassword;
+
+if (is_file("common/config/main-local.php")) {
+    $config = require "common/config/main-local.php";
+    $db = $config["components"]["db"] ?? [];
+    if (!$envUser && isset($db["username"])) {
+        $user = $db["username"];
+    }
+    if ($envPassword === false && isset($db["password"])) {
+        $password = $db["password"];
+    }
+}
+
+try {
+    $pdo = new PDO("mysql:host={$host};port={$port}", $user, $password, [
+        PDO::ATTR_TIMEOUT => 2,
+        PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
+    ]);
+    $pdo->query("SELECT 1");
+    exit(0);
+} catch (Throwable $e) {
+    exit(1);
+}
+' "$host" "$port"; then
+      log "Database ready at $host:$port"
       return 0
     fi
 
-    log "Waiting for database at $host:$port"
+    log "Waiting for database readiness at $host:$port"
     sleep "$interval"
     elapsed=$((elapsed + interval))
   done
 
-  log "Database did not become reachable at $host:$port within ${timeout}s"
+  log "Database did not become ready at $host:$port within ${timeout}s"
   return 1
 }
 
