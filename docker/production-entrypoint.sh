@@ -17,7 +17,15 @@ resolve_db_target() {
   fi
 
   if [ -n "${DATABASE_URL:-}" ]; then
-    php -r '$parts = parse_url(getenv("DATABASE_URL")); if (!empty($parts["host"])) { echo $parts["host"] . ":" . ($parts["port"] ?? 3306); exit(0); } exit(1);'
+    php <<'PHP'
+<?php
+$parts = parse_url(getenv('DATABASE_URL'));
+if (!empty($parts['host'])) {
+    echo $parts['host'] . ':' . ($parts['port'] ?? '3306');
+    exit(0);
+}
+exit(1);
+PHP
     return $?
   fi
 
@@ -63,6 +71,16 @@ if ($envPassword === false) {
 
 $user = $envUser ?: "root";
 $password = $envPassword === false ? "" : $envPassword;
+
+if ((!$envUser || $envPassword === false) && ($databaseUrl = getenv("DATABASE_URL"))) {
+    $parts = parse_url($databaseUrl);
+    if (!$envUser && isset($parts["user"])) {
+        $user = rawurldecode($parts["user"]);
+    }
+    if ($envPassword === false && isset($parts["pass"])) {
+        $password = rawurldecode($parts["pass"]);
+    }
+}
 
 if (is_file("common/config/main-local.php")) {
     $config = require "common/config/main-local.php";
